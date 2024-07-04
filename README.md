@@ -12,3 +12,9 @@ more coming soon...
 ```shell
 migrate create -ext sql -dir database/migrations migration_name
 ```
+
+## Fix dirty database version after running invalid migration
+
+```shell
+go run cmd/fix.go -1
+```
