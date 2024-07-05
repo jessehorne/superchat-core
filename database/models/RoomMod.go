@@ -1,5 +1,10 @@
 package models
 
+const (
+	RoomModRoleOwner = iota
+	RoomModRoleMod
+)
+
 type RoomMod struct {
 	GivenFields
 

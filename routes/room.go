@@ -23,6 +23,17 @@ func RoomCreate(c *gin.Context) {
 		return
 	}
 
+	// get user from request
+	u, exists := c.Get("user")
+	if !exists {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "no auth user",
+		})
+		return
+	}
+
+	user := u.(models.User)
+
 	// create room
 	var newRoom models.Room
 	newRoom.ID = uuid.New().String()
@@ -35,10 +46,44 @@ func RoomCreate(c *gin.Context) {
 		newRoom.PasswordSalt = salt
 	}
 
-	result := database.GDB.Create(&newRoom)
-	if result.RowsAffected != 1 {
-		log.Println(result.Error.Error())
+	roomResult := database.GDB.Create(&newRoom)
+	if roomResult.RowsAffected != 1 {
+		log.Println(roomResult.Error.Error())
 		c.JSON(http.StatusBadRequest, nil)
+		return
+	}
+
+	// add user as mod (owner)
+	newMod := models.RoomMod{
+		GivenFields: models.GivenFields{
+			ID: uuid.New().String(),
+		},
+		UserID: user.ID,
+		RoomID: newRoom.ID,
+		Role:   models.RoomModRoleOwner,
+	}
+	newModResult := database.GDB.Create(&newMod)
+	if newModResult.RowsAffected == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "error creating owner record",
+		})
+		return
+	}
+
+	// add user to room
+	newRoomUser := models.RoomUser{
+		GivenFields: models.GivenFields{
+			ID: uuid.New().String(),
+		},
+		RoomID: newRoom.ID,
+		UserID: user.ID,
+		Muted:  false,
+	}
+	newRoomUserResult := database.GDB.Create(&newRoomUser)
+	if newRoomUserResult.RowsAffected == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "error creating room user record",
+		})
 		return
 	}
 

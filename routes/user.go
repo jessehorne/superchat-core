@@ -27,11 +27,13 @@ func UserCreate(c *gin.Context) {
 
 	// attempt to create user
 	u := models.User{
+		GivenFields: models.GivenFields{
+			ID: uuid.New().String(),
+		},
 		Email:        req.Email,
 		Password:     hash,
 		PasswordSalt: salt,
 	}
-	u.ID = uuid.New().String()
 
 	result := database.GDB.Create(&u)
 
