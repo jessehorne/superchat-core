@@ -1,9 +1,7 @@
 package models
 
-import "gorm.io/gorm"
-
 type RoomUser struct {
-	gorm.Model
+	GivenFields
 
 	RoomID string
 	UserID string

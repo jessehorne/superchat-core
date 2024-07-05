@@ -25,6 +25,7 @@ func main() {
 	r := gin.Default()
 	r.GET("/api/ping", routes.GetPing)
 	r.POST("/api/user", routes.UserCreate)
+	r.GET("/api/user/token", routes.UserGetToken)
 
 	r.Run(fmt.Sprintf("%s:%s", os.Getenv("APP_HOST"), os.Getenv("APP_PORT")))
 }

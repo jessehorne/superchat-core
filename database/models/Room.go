@@ -1,9 +1,7 @@
 package models
 
-import "gorm.io/gorm"
-
 type Room struct {
-	gorm.Model
+	GivenFields
 
 	Name              string
 	PasswordProtected bool

@@ -1,7 +1,9 @@
 package util
 
 import (
+	"bytes"
 	"crypto/rand"
+	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/base64"
 	"golang.org/x/crypto/argon2"
@@ -33,6 +35,7 @@ func GenerateSalt(len int) []byte {
 	return salt
 }
 
+// GenerateHsh takes a password and salt byte array and returns a byte array containing an argon2 key
 func GenerateHash(pass string, salt []byte) []byte {
 	return argon2.IDKey([]byte(pass), salt,
 		argonParams.iterations, argonParams.memory, argonParams.parallelism, argonParams.keyLength)
@@ -62,4 +65,32 @@ func ComparePassword(pass string, salt string, hash string) bool {
 	}
 
 	return false
+}
+
+// CreateToken creates a session-based auth token and sha256 hash of it and returns them
+// The token and token hash are base64 encoded.
+func CreateToken() (string, string) {
+	b := make([]byte, 32)
+	rand.Read(b)
+	h := sha256.New()
+	h.Write(b)
+	bs := h.Sum(nil)
+
+	tokenBase64 := base64.RawStdEncoding.EncodeToString(b)
+	hashBase64 := base64.RawStdEncoding.EncodeToString(bs)
+
+	return tokenBase64, hashBase64
+}
+
+// ValidateToken takes base64 encoded token and token hash and returns true if they are equal when the token is decoded
+// and sha256'd.
+func ValidateToken(token string, hash string) bool {
+	decodedToken, _ := base64.RawStdEncoding.DecodeString(token)
+	decodedHash, _ := base64.RawStdEncoding.DecodeString(hash)
+
+	h := sha256.New()
+	h.Write(decodedToken)
+	bs := h.Sum(nil)
+
+	return bytes.Equal(bs, decodedHash)
 }
