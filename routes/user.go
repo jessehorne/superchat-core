@@ -2,7 +2,7 @@ package routes
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/go-playground/validator/v10"
+	"github.com/google/uuid"
 	"github.com/jessehorne/superchat-core/database"
 	"github.com/jessehorne/superchat-core/database/models"
 	"github.com/jessehorne/superchat-core/util"
@@ -11,22 +11,15 @@ import (
 )
 
 type UserCreateRequest struct {
-	Email    string `json:"email" binding:"required,email,lte=255"`
-	Password string `json:"password,gte=8,lte=255"`
+	Email    string `json:"email" binding:"required,email,max=255"`
+	Password string `json:"password,min=8,max=255"`
 }
 
 func UserCreate(c *gin.Context) {
 	var req UserCreateRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		errors := err.(validator.ValidationErrors)
-		errs := []string{}
-		for _, e := range errors {
-			errs = append(errs, e.Error())
-		}
-		c.JSON(http.StatusBadRequest, gin.H{
-			"msg":    "invalid",
-			"errors": errs,
-		})
+	err, res := util.TryBind(&req, c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, res)
 		return
 	}
 
@@ -38,6 +31,7 @@ func UserCreate(c *gin.Context) {
 		Password:     hash,
 		PasswordSalt: salt,
 	}
+	u.ID = uuid.New().String()
 
 	result := database.GDB.Create(&u)
 
@@ -59,16 +53,9 @@ type UserGetTokenRequest struct {
 
 func UserGetToken(c *gin.Context) {
 	var req UserGetTokenRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		errors := err.(validator.ValidationErrors)
-		errs := []string{}
-		for _, e := range errors {
-			errs = append(errs, e.Error())
-		}
-		c.JSON(http.StatusBadRequest, gin.H{
-			"msg":    "invalid",
-			"errors": errs,
-		})
+	err, res := util.TryBind(&req, c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, res)
 		return
 	}
 
@@ -113,6 +100,7 @@ func UserGetToken(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"token":     token,
+		"userID":    user.ID,
 		"expiresAt": sesh.ExpiresAt.Format(time.RFC3339),
 	})
 }

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/jessehorne/superchat-core/database"
+	"github.com/jessehorne/superchat-core/middleware"
 	"github.com/jessehorne/superchat-core/routes"
 	"github.com/joho/godotenv"
 	"os"
@@ -26,6 +27,8 @@ func main() {
 	r.GET("/api/ping", routes.GetPing)
 	r.POST("/api/user", routes.UserCreate)
 	r.GET("/api/user/token", routes.UserGetToken)
+
+	r.POST("/api/room", middleware.AuthMiddleware, routes.RoomCreate)
 
 	r.Run(fmt.Sprintf("%s:%s", os.Getenv("APP_HOST"), os.Getenv("APP_PORT")))
 }
