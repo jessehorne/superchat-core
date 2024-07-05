@@ -49,7 +49,9 @@ func RoomCreate(c *gin.Context) {
 	roomResult := database.GDB.Create(&newRoom)
 	if roomResult.RowsAffected != 1 {
 		log.Println(roomResult.Error.Error())
-		c.JSON(http.StatusBadRequest, nil)
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "db error",
+		})
 		return
 	}
 
@@ -83,6 +85,91 @@ func RoomCreate(c *gin.Context) {
 	if newRoomUserResult.RowsAffected == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "error creating room user record",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"roomID": newRoom.ID,
+	})
+}
+
+type RoomUpdateRequest struct {
+	RoomID   string `json:"roomID" binding:"required"`
+	Name     string `json:"name"`
+	Password string `json:"password"`
+}
+
+func RoomUpdate(c *gin.Context) {
+	var req RoomUpdateRequest
+	err, res := util.TryBind(&req, c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, res)
+		return
+	}
+
+	if req.RoomID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "missing roomID",
+		})
+		return
+	}
+
+	// get room or return error if it doesn't exist
+	var room models.Room
+	roomResult := database.GDB.First(&room, "id = ?", req.RoomID)
+	if roomResult.RowsAffected == 0 {
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": "room not found",
+		})
+		return
+	}
+
+	// get user from request
+	u, exists := c.Get("user")
+	if !exists {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "no auth user",
+		})
+		return
+	}
+
+	user := u.(models.User)
+
+	// make sure user is an owner
+	var roomMod models.RoomMod
+	roomModResult := database.GDB.Where("room_id = ?", req.RoomID).First(&roomMod, "user_id = ?", user.ID)
+	if roomModResult.RowsAffected == 0 {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "are you even a mod bro",
+		})
+		return
+	}
+
+	if roomMod.Role != models.RoomModRoleOwner {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "you're not the owner",
+		})
+		return
+	}
+
+	// update room name if the field was found
+	if req.Name != "" {
+		room.Name = req.Name
+	}
+
+	// update room password if password field was given
+	if req.Password != "" {
+		salt, hash := util.ProcessPassword(req.Password)
+		room.PasswordProtected = true
+		room.Password = hash
+		room.PasswordSalt = salt
+	}
+
+	updateResult := database.GDB.Save(&room)
+	if updateResult.RowsAffected == 0 {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "something went wrong with the db",
 		})
 		return
 	}

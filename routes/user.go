@@ -86,14 +86,14 @@ func UserGetToken(c *gin.Context) {
 
 	// check if session already exists...if so, update it
 	var sesh models.Session
-	sessionResult := database.GDB.First(&sesh, "id = ?", user.ID)
-
+	sessionResult := database.GDB.First(&sesh, "user_id = ?", user.ID)
 	sesh.Token = hash
 	sesh.ExpiresAt = time.Now().Local().Add(1 * time.Hour)
 	sesh.UserID = user.ID
 
 	if sessionResult.RowsAffected == 0 {
 		// we need to creat the record now
+		sesh.ID = uuid.New().String()
 		database.GDB.Create(&sesh)
 	} else {
 		// we need to update it

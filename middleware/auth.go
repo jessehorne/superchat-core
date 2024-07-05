@@ -29,7 +29,9 @@ func AuthMiddleware(c *gin.Context) {
 
 	// check if token is valid
 	if !util.ValidateToken(token, sesh.Token) {
-		c.JSON(http.StatusUnauthorized, nil)
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "invalid token",
+		})
 		c.Abort()
 		return
 	}

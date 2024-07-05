@@ -29,6 +29,7 @@ func main() {
 	r.GET("/api/user/token", routes.UserGetToken)
 
 	r.POST("/api/room", middleware.AuthMiddleware, routes.RoomCreate)
+	r.PUT("/api/room", middleware.AuthMiddleware, routes.RoomUpdate)
 
 	r.Run(fmt.Sprintf("%s:%s", os.Getenv("APP_HOST"), os.Getenv("APP_PORT")))
 }

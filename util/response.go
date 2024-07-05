@@ -21,6 +21,7 @@ func TryBind(obj any, c *gin.Context) (error, gin.H) {
 		}
 		return errors.New("invalid with error"), gin.H{
 			"error": "invalid json",
+			"err":   err.Error(),
 		}
 	}
 
