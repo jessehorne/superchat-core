@@ -9,6 +9,9 @@ import (
 	"os"
 )
 
+var DB *sql.DB
+var GDB *gorm.DB
+
 func GetDSN() string {
 	user := os.Getenv("MYSQL_USER")
 	pass := os.Getenv("MYSQL_PASS")
@@ -27,6 +30,8 @@ func InitDB() (*sql.DB, error) {
 		return nil, err
 	}
 
+	DB = db
+
 	return db, nil
 }
 
@@ -35,6 +40,8 @@ func InitGDB() (*gorm.DB, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	GDB = db
 
 	return db, nil
 }
