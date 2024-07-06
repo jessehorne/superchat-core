@@ -31,6 +31,7 @@ func main() {
 	r.POST("/api/room", middleware.AuthMiddleware, routes.RoomCreate)
 	r.PUT("/api/room", middleware.AuthMiddleware, routes.RoomUpdate)
 	r.DELETE("/api/room", middleware.AuthMiddleware, routes.RoomDelete)
+	r.POST("/api/room/mod", middleware.AuthMiddleware, routes.RoomAddMod)
 
 	r.Run(fmt.Sprintf("%s:%s", os.Getenv("APP_HOST"), os.Getenv("APP_PORT")))
 }

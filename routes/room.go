@@ -177,8 +177,12 @@ func RoomUpdate(c *gin.Context) {
 	c.JSON(http.StatusOK, nil)
 }
 
+type RoomDeleteRequest struct {
+	RoomID string `json:"roomID"`
+}
+
 func RoomDelete(c *gin.Context) {
-	var req RoomUpdateRequest
+	var req RoomDeleteRequest
 	err, res := util.TryBind(&req, c)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, res)
@@ -235,6 +239,105 @@ func RoomDelete(c *gin.Context) {
 	if deleteResult.RowsAffected == 0 {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "something went wrong deleting the room",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, nil)
+}
+
+type RoomAddModRequest struct {
+	RoomID string `json:"roomID"`
+	UserID string `json:"userID"`
+	Role   int    `json:"role,default=-1"`
+}
+
+func RoomAddMod(c *gin.Context) {
+	var req RoomAddModRequest
+	err, res := util.TryBind(&req, c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, res)
+		return
+	}
+
+	if req.RoomID == "" || req.UserID == "" || req.Role == -1 {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "missing details",
+		})
+		return
+	}
+
+	if req.Role != 0 && req.Role != 1 {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "invalid role",
+		})
+		return
+	}
+
+	// get room or return error if it doesn't exist
+	var room models.Room
+	roomResult := database.GDB.First(&room, "id = ?", req.RoomID)
+	if roomResult.RowsAffected == 0 {
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": "room not found",
+		})
+		return
+	}
+
+	// get user from request
+	u, exists := c.Get("user")
+	if !exists {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "no auth user",
+		})
+		return
+	}
+
+	user := u.(models.User)
+
+	// make sure user is an owner
+	var roomMod models.RoomMod
+	roomModResult := database.GDB.Where("room_id = ?", req.RoomID).First(&roomMod, "user_id = ?", user.ID)
+	if roomModResult.RowsAffected == 0 {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "are you even a mod bro",
+		})
+		return
+	}
+
+	// make sure a mod doesn't already exist
+	var existingRoomMod models.RoomMod
+	existingRoomModResult := database.GDB.Where("room_id = ?", req.RoomID).First(&existingRoomMod, "user_id = ?", req.UserID)
+	if existingRoomModResult.RowsAffected > 0 {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "mod already exists",
+		})
+		return
+	}
+
+	// get target user
+	var targetUser models.User
+	targetUserResult := database.GDB.First(&targetUser, "id = ?", req.UserID)
+	if targetUserResult.RowsAffected == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "no target user",
+		})
+		return
+	}
+
+	newRoomMod := models.RoomMod{
+		GivenFields: models.GivenFields{
+			ID: uuid.New().String(),
+		},
+		UserID: req.UserID,
+		RoomID: req.RoomID,
+		Role:   req.Role,
+	}
+
+	newRoomModResult := database.GDB.Create(&newRoomMod)
+	if newRoomModResult.RowsAffected == 0 {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "error saving room mod",
 		})
 		return
 	}
