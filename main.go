@@ -33,6 +33,7 @@ func main() {
 	r.DELETE("/api/room", middleware.AuthMiddleware, routes.RoomDelete)
 	r.POST("/api/room/mod", middleware.AuthMiddleware, routes.RoomAddMod)
 	r.PUT("/api/room/mod", middleware.AuthMiddleware, routes.RoomUpdateMod)
+	r.DELETE("/api/room/mod", middleware.AuthMiddleware, routes.RoomDeleteMod)
 
 	r.Run(fmt.Sprintf("%s:%s", os.Getenv("APP_HOST"), os.Getenv("APP_PORT")))
 }
