@@ -168,8 +168,73 @@ func RoomUpdate(c *gin.Context) {
 
 	updateResult := database.GDB.Save(&room)
 	if updateResult.RowsAffected == 0 {
-		c.JSON(http.StatusUnauthorized, gin.H{
+		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "something went wrong with the db",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, nil)
+}
+
+func RoomDelete(c *gin.Context) {
+	var req RoomUpdateRequest
+	err, res := util.TryBind(&req, c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, res)
+		return
+	}
+
+	if req.RoomID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "missing roomID",
+		})
+		return
+	}
+
+	// get room or return error if it doesn't exist
+	var room models.Room
+	roomResult := database.GDB.First(&room, "id = ?", req.RoomID)
+	if roomResult.RowsAffected == 0 {
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": "room not found",
+		})
+		return
+	}
+
+	// get user from request
+	u, exists := c.Get("user")
+	if !exists {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "no auth user",
+		})
+		return
+	}
+
+	user := u.(models.User)
+
+	// make sure user is an owner
+	var roomMod models.RoomMod
+	roomModResult := database.GDB.Where("room_id = ?", req.RoomID).First(&roomMod, "user_id = ?", user.ID)
+	if roomModResult.RowsAffected == 0 {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "are you even a mod bro",
+		})
+		return
+	}
+
+	if roomMod.Role != models.RoomModRoleOwner {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "you're not the owner",
+		})
+		return
+	}
+
+	// delete room
+	deleteResult := database.GDB.Delete(&room)
+	if deleteResult.RowsAffected == 0 {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "something went wrong deleting the room",
 		})
 		return
 	}

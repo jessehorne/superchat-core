@@ -6,6 +6,7 @@ import (
 	"github.com/jessehorne/superchat-core/database/models"
 	"github.com/jessehorne/superchat-core/util"
 	"net/http"
+	"time"
 )
 
 func AuthMiddleware(c *gin.Context) {
@@ -31,6 +32,15 @@ func AuthMiddleware(c *gin.Context) {
 	if !util.ValidateToken(token, sesh.Token) {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"error": "invalid token",
+		})
+		c.Abort()
+		return
+	}
+
+	// check if expires at isn't past
+	if time.Now().After(sesh.ExpiresAt) {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "expired token",
 		})
 		c.Abort()
 		return
