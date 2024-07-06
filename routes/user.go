@@ -161,3 +161,51 @@ func UserUpdate(c *gin.Context) {
 
 	c.JSON(http.StatusOK, nil)
 }
+
+type UserDeleteRequest struct {
+	UserID string `json:"userID"`
+}
+
+func UserDelete(c *gin.Context) {
+	var req UserUpdateRequest
+	err, res := util.TryBind(&req, c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, res)
+		return
+	}
+
+	if req.UserID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "missing details",
+		})
+		return
+	}
+
+	// get user from request
+	u, exists := c.Get("user")
+	if !exists {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "no auth user",
+		})
+		return
+	}
+
+	user := u.(models.User)
+
+	if user.ID != req.UserID {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "you can't do that dude",
+		})
+		return
+	}
+
+	deleteResult := database.GDB.Delete(&user)
+	if deleteResult.RowsAffected == 0 {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "db issue while delete user",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, nil)
+}

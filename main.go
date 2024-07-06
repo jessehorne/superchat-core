@@ -31,6 +31,7 @@ func main() {
 	r.POST("/api/user", routes.UserCreate)
 	r.GET("/api/user/token", routes.UserGetToken)
 	r.PUT("/api/user", middleware.AuthMiddleware, routes.UserUpdate)
+	r.DELETE("/api/user", middleware.AuthMiddleware, routes.UserDelete)
 
 	/* Room Routes */
 	r.POST("/api/room", middleware.AuthMiddleware, routes.RoomCreate)
