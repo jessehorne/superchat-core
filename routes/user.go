@@ -45,7 +45,9 @@ func UserCreate(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{})
+	c.JSON(http.StatusOK, gin.H{
+		"userID": u.ID,
+	})
 }
 
 type UserGetTokenRequest struct {
@@ -105,4 +107,57 @@ func UserGetToken(c *gin.Context) {
 		"userID":    user.ID,
 		"expiresAt": sesh.ExpiresAt.Format(time.RFC3339),
 	})
+}
+
+type UserUpdateRequest struct {
+	UserID   string `json:"userID"`
+	Password string `json:"password"`
+}
+
+func UserUpdate(c *gin.Context) {
+	var req UserUpdateRequest
+	err, res := util.TryBind(&req, c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, res)
+		return
+	}
+
+	if req.UserID == "" || req.Password == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "missing details",
+		})
+		return
+	}
+
+	// get user from request
+	u, exists := c.Get("user")
+	if !exists {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "no auth user",
+		})
+		return
+	}
+
+	user := u.(models.User)
+
+	if user.ID != req.UserID {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "you can't do that dude",
+		})
+		return
+	}
+
+	salt, hash := util.ProcessPassword(req.Password)
+	user.PasswordSalt = salt
+	user.Password = hash
+
+	saveResult := database.GDB.Save(&user)
+	if saveResult.RowsAffected == 0 {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "db issue while saving user",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, nil)
 }

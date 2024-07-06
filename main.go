@@ -24,10 +24,15 @@ func main() {
 	}
 
 	r := gin.Default()
+
 	r.GET("/api/ping", routes.GetPing)
+
+	/* User Routes */
 	r.POST("/api/user", routes.UserCreate)
 	r.GET("/api/user/token", routes.UserGetToken)
+	r.PUT("/api/user", middleware.AuthMiddleware, routes.UserUpdate)
 
+	/* Room Routes */
 	r.POST("/api/room", middleware.AuthMiddleware, routes.RoomCreate)
 	r.PUT("/api/room", middleware.AuthMiddleware, routes.RoomUpdate)
 	r.DELETE("/api/room", middleware.AuthMiddleware, routes.RoomDelete)
