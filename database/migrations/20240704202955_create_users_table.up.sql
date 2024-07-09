@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS users (
     deleted_at TIMESTAMP,
 
     email VARCHAR(255),
+    name VARCHAR(255),
     password VARCHAR(255),
     password_salt VARCHAR(255),
 

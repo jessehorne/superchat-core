@@ -12,6 +12,7 @@ import (
 
 type UserCreateRequest struct {
 	Email    string `json:"email" binding:"required,email,max=255"`
+	Name     string `json:"name" binding:"required,max=255"`
 	Password string `json:"password,min=8,max=255"`
 }
 
@@ -31,6 +32,7 @@ func UserCreate(c *gin.Context) {
 			ID: uuid.New().String(),
 		},
 		Email:        req.Email,
+		Name:         req.Name,
 		Password:     hash,
 		PasswordSalt: salt,
 	}
@@ -111,6 +113,7 @@ func UserGetToken(c *gin.Context) {
 
 type UserUpdateRequest struct {
 	UserID   string `json:"userID"`
+	Name     string `json:"name"`
 	Password string `json:"password"`
 }
 
@@ -122,7 +125,7 @@ func UserUpdate(c *gin.Context) {
 		return
 	}
 
-	if req.UserID == "" || req.Password == "" {
+	if req.UserID == "" || (req.Password == "" || req.Name == "") {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "missing details",
 		})
@@ -147,9 +150,15 @@ func UserUpdate(c *gin.Context) {
 		return
 	}
 
-	salt, hash := util.ProcessPassword(req.Password)
-	user.PasswordSalt = salt
-	user.Password = hash
+	if req.Password != "" {
+		salt, hash := util.ProcessPassword(req.Password)
+		user.PasswordSalt = salt
+		user.Password = hash
+	}
+
+	if req.Name != "" {
+		user.Name = req.Name
+	}
 
 	saveResult := database.GDB.Save(&user)
 	if saveResult.RowsAffected == 0 {
